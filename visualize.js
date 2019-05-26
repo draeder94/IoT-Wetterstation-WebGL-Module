@@ -166,7 +166,7 @@ function initVisualize(canvas) {
 						let val = graph.findVal(pos);
 						let date = new Date(val[0]);
 
-						let strVal = `${val[1]} ${graph.valueFormat}`;
+						let strVal = `${val[1].toPrecision(2)} ${graph.valueFormat}`;
 						let strWidthVal = drawContext.measureText(strVal).width;
 						let strTime = `${date.toDateString()} ${date.getHours()}:${date.getMinutes()}`;
 						let strWidthTime = drawContext.measureText(strTime).width;
