@@ -119,6 +119,8 @@ function initVisualize(canvas) {
 
 	const deg90 = 22.5 * Math.PI / 180;
 	scene.actionManager = new BABYLON.ActionManager(scene);
+	// manual camera rotation
+	/*
 	scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, (evt) => {
 		console.log("keypress: " + evt.sourceEvent.key);
 		if (evt.sourceEvent.key === "ArrowLeft") {
@@ -134,6 +136,7 @@ function initVisualize(canvas) {
 			cube.rotation.x -= deg90;
 		}
 	}));
+	*/
 
 	window.addEventListener("resize", function () {
 		engine.resize();
@@ -197,7 +200,8 @@ function initVisualize(canvas) {
 
 	return {
 		graphs: graphs,
-		addGraph: (name, color, data) => _addGraph(name, color, graphs, data, textureScene),
+		addGraph: (name, color, data, maxlength=-1) => _addGraph(name, color, graphs, data, maxlength, textureScene),
+		addToGraph: (name, val) => graphs[name].addVal(val),
 		updateGraph: (name, data) => graphs[name].update(data)
 	}
 }
@@ -209,10 +213,11 @@ function initVisualize(canvas) {
  * @param graphs
  * @param data in the format: { format: string, values: [ [time since epoch, number], ... ] }
  *          format is the display format for the value, such as "°C" or "%"
+ * @param maxLength
  * @param textureScene
  * @returns created graph object
  */
-function _addGraph(name, color, graphs, data, textureScene) {
+function _addGraph(name, color, graphs, data, maxLength, textureScene) {
 	console.log("Adding graph " + graphs._count + ", '" + name + "'");
 
 	const offsetX = -0.5 + graphs._count % 2 * 0.5 + sizes.marginLeft;
@@ -257,15 +262,18 @@ function _addGraph(name, color, graphs, data, textureScene) {
 		name: name,
 		valueFormat: data.format,
 		data: sortData(data.values),
-		domainTime: domains.domainTime,
-		domainValue: domains.domainValue,
+		domainTime: null,
+		domainValue: null,
 		color: BABYLON.Color4.FromArray(color),
+		maxLength: Math.max(data.values.length, maxLength),
 		lines: null,
 		scaleTime: null,
 		scaleVal: null,
 		update: null,
+		addVal: null,
 		findVal: null
 	};
+	Object.assign(graph, domains);
 
 	graph.scaleVal = function (val) {
 		return (val - this.domainValue[0]) / (this.domainValue[1] - this.domainValue[0]);
@@ -293,7 +301,26 @@ function _addGraph(name, color, graphs, data, textureScene) {
 		}
 		else if (data instanceof Array)
 			this.data = sortData(data);
+		this.maxLength = Math.max(this.data.length, this.maxLength);
 		Object.assign(graph, determineDomains(data.values));
+		this.lines.dispose();
+		this.lines = buildLine(this);
+	};
+	graph.addVal = function (val) {
+		if (val[0] > this.domainTime[1])
+			this.domainTime[1] = val[0];
+		if (val[0] < this.domainTime[0])
+			this.domainTime[0] = val[0];
+		if (val[1] > this.domainValue[1])
+			this.domainValue[1] = val[1];
+		if (val[1] < this.domainValue[0])
+			this.domainValue[0] = val[1];
+		this.data.push(val);
+		if (this.data.length > this.maxLength)
+		{
+			this.data.splice(0, this.data.length - this.maxLength);
+			Object.assign(graph, determineDomains(data.values));
+		}
 		this.lines.dispose();
 		this.lines = buildLine(this);
 	};
