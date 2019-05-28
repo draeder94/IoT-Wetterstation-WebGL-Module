@@ -65,7 +65,7 @@ function initVisualize(canvas) {
 	const engine = new BABYLON.Engine(canvas, true); // Generate the BABYLON 3D engine
 	const scene = new BABYLON.Scene(engine);
 	const light1 = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 1, 0), scene);
-	const light2 = new BABYLON.PointLight("light2", new BABYLON.Vector3(0, 1, -1), scene);
+	const light2 = new BABYLON.PointLight("light2", new BABYLON.Vector3(-1, -1, -1), scene);
 	const camera = new BABYLON.UniversalCamera("UniversalCamera", new BABYLON.Vector3(0, 0, -2), scene);
 	camera.setTarget(BABYLON.Vector3.Zero());
 
@@ -154,7 +154,7 @@ function initVisualize(canvas) {
 					let clicked_x = 0.5 + pickResult.pickedPoint.x;
 					let clicked_y = 0.5 + pickResult.pickedPoint.y;
 					if (clicked_x >= sizes.marginLeft * 2 //&& clicked_x <= 1 - sizes.marginLeft * 2
-						&& clicked_y >= sizes.marginTop * 2 ){//&& clicked_y <= 1 - sizes.marginTop * 2) {
+						&& clicked_y >= sizes.marginTop * 2) {//&& clicked_y <= 1 - sizes.marginTop * 2) {
 						let graph = graphs[displayMode.graph];
 
 						let cursorX = (displayMode.texOffset[0] + clicked_x / 2) * texSize | 0;
@@ -162,7 +162,7 @@ function initVisualize(canvas) {
 						let boundsLeft = displayMode.texOffset[0] * texSize;
 						let boundsRight = (displayMode.texOffset[0] + .5) * texSize;
 
-						let pos = (clicked_x - sizes.marginLeft*2)/(sizes.segmentWidth*2);
+						let pos = (clicked_x - sizes.marginLeft * 2) / (sizes.segmentWidth * 2);
 						let val = graph.findVal(pos);
 						let date = new Date(val[0]);
 
@@ -198,7 +198,7 @@ function initVisualize(canvas) {
 	return {
 		graphs: graphs,
 		addGraph: (name, color, data) => _addGraph(name, color, graphs, data, textureScene),
-		updateGraph: (name, data) => this.graphs[name].update(data)
+		updateGraph: (name, data) => graphs[name].update(data)
 	}
 }
 
@@ -220,51 +220,64 @@ function _addGraph(name, color, graphs, data, textureScene) {
 
 	createCoordinateSystem(name, offsetX, offsetY, textureScene);
 
-	let minVal, maxVal = null;
-	let minDate, maxDate = null;
-	for (let e of data.values) {
-		if (!minVal && !maxVal)
-			minVal = maxVal = e[1];
-		else if (minVal > e[1])
-			minVal = e[1];
-		else if (maxVal < e[1])
-			maxVal = e[1];
+	function determineDomains(values) {
+		let minVal, maxVal = null;
+		let minDate, maxDate = null;
+		for (let e of values) {
+			if (!minVal && !maxVal)
+				minVal = maxVal = e[1];
+			else if (minVal > e[1])
+				minVal = e[1];
+			else if (maxVal < e[1])
+				maxVal = e[1];
 
-		if (!minDate && !maxDate)
-			minDate = maxDate = e[0];
-		else if (minDate > e[0])
-			minDate = e[0];
-		else if (maxDate < e[0])
-			maxDate = e[0];
+			if (!minDate && !maxDate)
+				minDate = maxDate = e[0];
+			else if (minDate > e[0])
+				minDate = e[0];
+			else if (maxDate < e[0])
+				maxDate = e[0];
+		}
+		let tolerance = .1 * (maxVal - minVal); //10% tolerance
+		minVal -= tolerance;
+		maxVal += tolerance;
+		return {
+			domainTime: [minDate, maxDate],
+			domainValue: [minVal, maxVal]
+		};
 	}
-	let tolerance = .1 * (maxVal - minVal); //10% tolerance
-	minVal -= tolerance;
-	maxVal += tolerance;
 
 	function sortData(data) {
 		return data.sort((e1, e2) => e1[0] - e2[0]);
 	}
 
+	const domains = determineDomains(data.values);
+	console.log(domains);
 	const graph = {
 		name: name,
-		domain: [minVal, maxVal],
-		domainTime: [minDate, maxDate],
 		valueFormat: data.format,
 		data: sortData(data.values),
+		domainTime: domains.domainTime,
+		domainValue: domains.domainValue,
 		color: BABYLON.Color4.FromArray(color),
 		lines: null,
+		scaleTime: null,
+		scaleVal: null,
 		update: null,
-		scaleVal: (val) => (val - minVal) / (maxVal - minVal),
-		scaleTime: (time) => (time - minDate) / (maxDate - minDate),
 		findVal: null
+	};
+
+	graph.scaleVal = function (val) {
+		return (val - this.domainValue[0]) / (this.domainValue[1] - this.domainValue[0]);
+	};
+	graph.scaleTime = function (time) {
+		return (time - this.domainTime[0]) / (this.domainTime[1] - this.domainTime[0]);
 	};
 
 	function buildLine(graph) {
 		let points = [];
 		for (let d of graph.data)
 			points.push(new BABYLON.Vector3(offsetX + graph.scaleTime(d[0]) * sizes.segmentWidth, offsetY + graph.scaleVal(d[1]) * sizes.segmentHeight, z));
-		console.log("graph points: ");
-		console.log(points);
 		const lines = BABYLON.MeshBuilder.CreateLines("graph_" + graph.name, {points: points}, textureScene);
 		lines.enableEdgesRendering();
 		lines.edgesWidth = .3;
@@ -280,19 +293,20 @@ function _addGraph(name, color, graphs, data, textureScene) {
 		}
 		else if (data instanceof Array)
 			this.data = sortData(data);
+		Object.assign(graph, determineDomains(data.values));
 		this.lines.dispose();
 		this.lines = buildLine(this);
 	};
 	graph.findVal = function (x) {
-		let date = minDate + x * (maxDate - minDate);
+		let searchedDate = this.domainTime[0] + x * (this.domainTime[1] - this.domainTime[0]);
 		let idx = -1;
 		for (let i in this.data)
-			if (this.data[i][0] >= date)
+			if (this.data[i][0] >= searchedDate)
 				if (idx < 0)
 					return null;
 				else {
-					let distLast = date - this.data[idx][0];
-					let distNext = this.data[i][0]-date;
+					let distLast = searchedDate - this.data[idx][0];
+					let distNext = this.data[i][0] - searchedDate;
 					// console.log("distLast "+distLast+", distNext: "+distNext);
 					if (distLast <= distNext)
 						return this.data[idx];

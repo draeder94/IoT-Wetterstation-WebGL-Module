@@ -30,16 +30,37 @@ const valuesTest = [
 	[new Date('2019-5-26T11:20:00').valueOf(), 17, 64, 88]
 ];
 
-const dataTemp = {format: "°C", values:[]};
-const dataHumid = {format: "%", values:[]};
-const dataLight = {format: "Lux", values:[]};
-for(let d of valuesTest)
-{
-	dataTemp.values.push([d[0],d[1]]);
-	dataHumid.values.push([d[0],d[2]]);
-	dataLight.values.push([d[0],d[3]]);
+const dataTemp = {format: "°C", values: []};
+const dataHumid = {format: "%", values: []};
+const dataLight = {format: "Lux", values: []};
+for (let i in valuesTest) {
+	let date = new Date();
+	date.setSeconds(date.getSeconds()-(valuesTest.length-i));
+	dataTemp.values.push([date.valueOf(), valuesTest[i][1]]);
+	dataHumid.values.push([date.valueOf(), valuesTest[i][2]]);
+	dataLight.values.push([date.valueOf(), valuesTest[i][3]]);
 }
 
 visualize.addGraph("temp", [1, 0, 0, 1], dataTemp);
 visualize.addGraph("humid", [0, 0, 1, 1], dataHumid);
 visualize.addGraph("lux", [0, 1, 0, 1], dataLight);
+
+
+function updateValues() {
+	let date = new Date().valueOf();
+	dataTemp.values.push([date, dataTemp.values[0][1]]);
+	dataHumid.values.push([date, dataHumid.values[0][1]]);
+	dataLight.values.push([date, dataLight.values[0][1]]);
+
+	dataTemp.values.splice(0, 1);
+	dataHumid.values.splice(0, 1);
+	dataLight.values.splice(0, 1);
+
+	console.log("update!");
+	visualize.updateGraph("temp", dataTemp);
+	visualize.updateGraph("humid", dataHumid);
+	visualize.updateGraph("lux", dataLight);
+
+	setTimeout(updateValues, 1000);
+}
+setTimeout(updateValues, 1000);
