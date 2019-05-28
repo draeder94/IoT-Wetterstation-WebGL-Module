@@ -20,3 +20,7 @@ Parameter:
     - `values`: Array von Wertepaaren, Unixzeit (als Zahl) und Wert (als Zahl)
 
 Beispiel dazu in `testbed/index.js`
+
+## Visualisiertes Beispiel
+
+https://draeder94.github.io/IoT-Wetterstation-WebGL-Module/testbed/
