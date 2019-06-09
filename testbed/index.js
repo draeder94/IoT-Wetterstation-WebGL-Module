@@ -1,5 +1,7 @@
-var canvas = document.getElementById("renderCanvas"); // Get the canvas element
+const canvas = document.getElementById("renderCanvas"); // Get the canvas element
 
+const paramSim = /simulation=([^&]+)/.exec(window.location.href);
+const simulationType = paramSim ? paramSim[1] : "random";
 
 const visualize = initVisualize(canvas);
 
@@ -35,7 +37,7 @@ const dataHumid = {format: "%", values: []};
 const dataLight = {format: "Lux", values: []};
 for (let i in valuesTest) {
 	let date = new Date();
-	date.setSeconds(date.getSeconds()-(valuesTest.length-i));
+	date.setSeconds(date.getSeconds() - (valuesTest.length - i));
 	let timestamp = date.valueOf();
 	dataTemp.values.push([timestamp, valuesTest[i][0]]);
 	dataHumid.values.push([timestamp, valuesTest[i][1]]);
@@ -47,26 +49,45 @@ visualize.addGraph("humid", [0, 0, 1, 1], dataHumid, 30);
 visualize.addGraph("lux", [0, 1, 0, 1], dataLight, 30);
 
 let last = 0;
+let prevstep = [0, 0, 0];
+let prev = [0, 0, 0];
+
 function updateValues() {
 	let date = new Date().valueOf();
-	// dataTemp.values.push([date, dataTemp.values[0][1]]);
-	// dataHumid.values.push([date, dataHumid.values[0][1]]);
-	// dataLight.values.push([date, dataLight.values[0][1]]);
-	//
-	// dataTemp.values.splice(0, 1);
-	// dataHumid.values.splice(0, 1);
-	// dataLight.values.splice(0, 1);
-	// visualize.updateGraph("temp", dataTemp);
-	// visualize.updateGraph("humid", dataHumid);
-	// visualize.updateGraph("lux", dataLight);
 
-	visualize.addToGraph("temp", [date, valuesTest[last][0]]);
-	visualize.addToGraph("humid", [date, valuesTest[last][1]]);
-	visualize.addToGraph("lux", [date, valuesTest[last][2]]);
+	if (simulationType === "replace") { //Replace; Graph durch Verschobenen Graphen ersetzen
+		dataTemp.values.push([date, valuesTest[last][1]]);
+		dataHumid.values.push([date, valuesTest[last][1]]);
+		dataLight.values.push([date, valuesTest[last][1]]);
 
-	console.log("update!");
+		dataTemp.values.splice(0, 1);
+		dataHumid.values.splice(0, 1);
+		dataLight.values.splice(0, 1);
+		visualize.updateGraph("temp", dataTemp);
+		visualize.updateGraph("humid", dataHumid);
+		visualize.updateGraph("lux", dataLight);
+	} else if (simulationType === "cycle") { //Default; Wert von vorne zufügen
+		visualize.addToGraph("temp", [date, valuesTest[last][0]]);
+		visualize.addToGraph("humid", [date, valuesTest[last][1]]);
+		visualize.addToGraph("lux", [date, valuesTest[last][2]]);
+	} else { //Default; Zuffalswert
+		const flip = Math.random() * 5 > 3;
 
-	last = (last+1)%valuesTest.length;
+		if (flip)
+			for (let i = 0; i < 3; i++)
+				prevstep[i] *= -1;
+
+		const randomTemp = Math.random() * 28;
+		const randomHumid = 30 + Math.random() * 70;
+		const randomLight = 0.02 + Math.random() * 80000;
+
+		visualize.addToGraph("temp", [date, randomTemp]);
+		visualize.addToGraph("humid", [date, randomHumid]);
+		visualize.addToGraph("lux", [date, randomLight]);
+	}
+
+	last = (last + 1) % valuesTest.length;
 	setTimeout(updateValues, 1000);
 }
-setTimeout(updateValues, 1000);
+
+setTimeout(updateValues, 5000);

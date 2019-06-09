@@ -78,11 +78,35 @@ function initVisualize(canvas) {
 		_count: 0
 	};
 
+	/*
+	var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+	// advancedTexture.isForeground = false;
+
+	var button1 = BABYLON.GUI.Button.CreateSimpleButton("but1", "Click Me");
+	button1.width = "150px";
+	button1.height = "40px";
+	button1.color = "white";
+	button1.cornerRadius = 20;
+	button1.background = "green";
+	button1.onPointerUpObservable.add(function () {
+		alert("you did it!");
+	});
+	advancedTexture.addControl(button1);
+
+	var text1 = new BABYLON.GUI.TextBlock();
+	text1.text = "Hello world";
+	text1.color = "white";
+	text1.fontSize = 24;
+	advancedTexture.addControl(text1);
+*/
+
+	// scene.debugLayer.show();
+
+
 	const cube = buildCubeMesh(scene);
 	cube.rotation = displayMode.rotation;
 	const {textureScene, drawPlane} = initDynamicTexture(engine, scene, cube);
 	const drawContext = drawPlane.getContext();
-
 
 	scene.onPointerDown = function (evt, pickResult) {
 		if (pickResult.hit) {
@@ -149,46 +173,90 @@ function initVisualize(canvas) {
 				drawPlane.getContext().clearRect(0, 0, texSize, texSize);
 				drawPlane.update();
 			}
-			else if (displayMode !== Modes.OVERHEAD && displayMode.graph < graphs._count) {
+			else if (displayMode === Modes.OVERHEAD) {
+				drawContext.clearRect(0, 0, texSize, texSize);
+			}
+			else if (displayMode.graph < graphs._count) {
 				drawContext.clearRect(0, 0, texSize, texSize);
 				let update = true;
 				const pickResult = scene.pick(scene.pointerX, scene.pointerY);
 				if (pickResult.pickedPoint) {
 					let clicked_x = 0.5 + pickResult.pickedPoint.x;
 					let clicked_y = 0.5 + pickResult.pickedPoint.y;
-					if (clicked_x >= sizes.marginLeft * 2 //&& clicked_x <= 1 - sizes.marginLeft * 2
-						&& clicked_y >= sizes.marginTop * 2) {//&& clicked_y <= 1 - sizes.marginTop * 2) {
-						let graph = graphs[displayMode.graph];
+					let cursorX = (displayMode.texOffset[0] + clicked_x / 2) * texSize | 0;
+					let cursorY = (displayMode.texOffset[1] - clicked_y / 2) * texSize | 0;
+					let boundsLeft = displayMode.texOffset[0] * texSize;
+					let boundsRight = (displayMode.texOffset[0] + .5) * texSize;
 
-						let cursorX = (displayMode.texOffset[0] + clicked_x / 2) * texSize | 0;
-						let cursorY = (displayMode.texOffset[1] - clicked_y / 2) * texSize | 0;
-						let boundsLeft = displayMode.texOffset[0] * texSize;
-						let boundsRight = (displayMode.texOffset[0] + .5) * texSize;
+					let targetDM;
+					let renderPoint = [];
+					if (displayMode.isCorner(pickResult.pickedPoint.x, pickResult.pickedPoint.y))
+					{
+						targetDM = Modes.OVERHEAD;
+						renderPoint = [displayMode.texOffset[0]+.05, displayMode.texOffset[1]-0.25];
+					}
+					else if (pickResult.pickedPoint.x < -sizes.clickMarginSide)
+					{
+						targetDM = displayMode.neighbourLeft();
+						renderPoint = [displayMode.texOffset[0]+.05, displayMode.texOffset[1]-0.25];
+					}
+					else if (pickResult.pickedPoint.x > sizes.clickMarginSide)
+					{
+						targetDM = displayMode.neighbourRight();
+						renderPoint = [displayMode.texOffset[0]+.45, displayMode.texOffset[1]-0.25];
+					}
+					else if (pickResult.pickedPoint.y < -sizes.clickMarginSide)
+					{
+						targetDM = displayMode.neighbourBottom();
+						renderPoint = [displayMode.texOffset[0]+.25, displayMode.texOffset[1]-0.05];
+					}
+					else if (pickResult.pickedPoint.y > sizes.clickMarginSide)
+					{
+						targetDM = displayMode.neighbourTop();
+						renderPoint = [displayMode.texOffset[0]+.25, displayMode.texOffset[1]-0.45];
+					}
+					if (targetDM) {
+						let txt = "GoTo ";
+						if (targetDM === Modes.OVERHEAD)
+							txt += "Overview";
+						else
+							txt += graphs[targetDM.graph].name;
 
-						let pos = (clicked_x - sizes.marginLeft * 2) / (sizes.segmentWidth * 2);
-						let val = graph.findVal(pos);
-						let date = new Date(val[0]);
 
-						let strVal = `${val[1].toPrecision(2)} ${graph.valueFormat}`;
-						let strWidthVal = drawContext.measureText(strVal).width;
-						let strTime = `${date.toDateString()} ${date.getHours()}:${date.getMinutes()}`;
-						let strWidthTime = drawContext.measureText(strTime).width;
-						if (cursorX - strWidthTime / 2 < boundsLeft)
-							cursorX = boundsLeft + strWidthTime;
-						if (cursorX + strWidthTime / 2 > boundsRight)
-							cursorX = boundsRight - strWidthTime;
-						let posX = (displayMode.texOffset[0] + sizes.marginLeft + graph.scaleTime(val[0]) * sizes.segmentWidth) * texSize;
-						let posY = (displayMode.texOffset[1] - sizes.marginTop - graph.scaleVal(val[1]) * sizes.segmentHeight) * texSize;
+						let strWidth = drawContext.measureText(txt).width;
 
-						drawContext.beginPath();
-						drawContext.moveTo(cursorX, cursorY);
-						drawContext.lineTo(posX, posY);
-						drawContext.stroke();
+						drawPlane.drawText(txt, renderPoint[0]* texSize - strWidth / 2, renderPoint[1]*texSize, "bold 20px verdana", "white", "transparent");
+					}
+					else {
+						if (clicked_x >= sizes.marginLeft * 2 //&& clicked_x <= 1 - sizes.marginLeft * 2
+							&& clicked_y >= sizes.marginTop * 2) {//&& clicked_y <= 1 - sizes.marginTop * 2) {
+							let graph = graphs[displayMode.graph];
 
-						let off = [posY > cursorY ? -24 : 0, posY > cursorY ? 0 : 24];
-						drawPlane.drawText(strVal, cursorX - strWidthVal / 2, cursorY + off[0], "bold 20px verdana", "white", "transparent");
-						drawPlane.drawText(strTime, cursorX - strWidthTime / 2, cursorY + off[1], "bold 16px verdana", "white", "transparent");
-						update = false;
+							let pos = (clicked_x - sizes.marginLeft * 2) / (sizes.segmentWidth * 2);
+							let val = graph.findVal(pos);
+							let date = new Date(val[0]);
+
+							let strVal = `${val[1].toPrecision(2)} ${graph.valueFormat}`;
+							let strWidthVal = drawContext.measureText(strVal).width;
+							let strTime = `${date.toDateString()} ${date.getHours()}:${date.getMinutes()}`;
+							let strWidthTime = drawContext.measureText(strTime).width;
+							if (cursorX - strWidthTime / 2 < boundsLeft)
+								cursorX = boundsLeft + strWidthTime;
+							if (cursorX + strWidthTime / 2 > boundsRight)
+								cursorX = boundsRight - strWidthTime;
+							let posX = (displayMode.texOffset[0] + sizes.marginLeft + graph.scaleTime(val[0]) * sizes.segmentWidth) * texSize;
+							let posY = (displayMode.texOffset[1] - sizes.marginTop - graph.scaleVal(val[1]) * sizes.segmentHeight) * texSize;
+
+							drawContext.beginPath();
+							drawContext.moveTo(cursorX, cursorY);
+							drawContext.lineTo(posX, posY);
+							drawContext.stroke();
+
+							let off = [posY > cursorY ? -24 : 0, posY > cursorY ? 0 : 24];
+							drawPlane.drawText(strVal, cursorX - strWidthVal / 2, cursorY + off[0], "bold 20px verdana", "white", "transparent");
+							drawPlane.drawText(strTime, cursorX - strWidthTime / 2, cursorY + off[1], "bold 16px verdana", "white", "transparent");
+							update = false;
+						}
 					}
 				}
 				if (update)
@@ -200,7 +268,7 @@ function initVisualize(canvas) {
 
 	return {
 		graphs: graphs,
-		addGraph: (name, color, data, maxlength=-1) => _addGraph(name, color, graphs, data, maxlength, textureScene),
+		addGraph: (name, color, data, maxlength = -1) => _addGraph(name, color, graphs, data, maxlength, textureScene),
 		addToGraph: (name, val) => graphs[name].addVal(val),
 		updateGraph: (name, data) => graphs[name].update(data)
 	}
@@ -316,8 +384,7 @@ function _addGraph(name, color, graphs, data, maxLength, textureScene) {
 		if (val[1] < this.domainValue[0])
 			this.domainValue[0] = val[1];
 		this.data.push(val);
-		if (this.data.length > this.maxLength)
-		{
+		if (this.data.length > this.maxLength) {
 			this.data.splice(0, this.data.length - this.maxLength);
 			Object.assign(graph, determineDomains(data.values));
 		}
@@ -450,6 +517,7 @@ function initDynamicTexture(engine, scene, cube) {
 	// Create draw plane
 	const drawPlane = BABYLON.Mesh.CreatePlane("drawPlane", 1.6, textureScene, false);
 	drawPlane.material = new BABYLON.StandardMaterial("drawPlane", textureScene);
+	drawPlane.position.z = 50;
 
 
 	const drawPlaneTexture = new BABYLON.DynamicTexture("drawPlaneTexture", texSize, textureScene, true);
