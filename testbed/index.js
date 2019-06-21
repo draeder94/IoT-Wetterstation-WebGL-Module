@@ -1,8 +1,9 @@
+const GRAPHQL_URL = "http://40.89.134.226:4000/";
 const REQUEST = {
-	method: 'POST',
+	method: "POST",
 	headers: {
-		'Content-Type': 'application/json',
-		'Accept': 'application/json',
+		"Content-Type": "application/json",
+		"Accept": "application/json"
 	}
 };
 
@@ -13,42 +14,45 @@ const paramSim = /simulation=([^&]+)/.exec(window.location.href);
 const simulationType = paramSim ? paramSim[1] : "random";
 
 const visualize = initVisualize(canvas);
+visualize.addGraph("temp", [1, 0, 0, 1], {format: "°C", values: []}, 30, 10, 30);
+visualize.addGraph("humid", [0, 0, 1, 1], {format: "%", values: []}, 30, 20, 80);
+visualize.addGraph("lux", [0, 1, 0, 1], {format: "Lux", values: []}, 30);
 
 async function fetchDevices() {
 	REQUEST.body = JSON.stringify({
-		query: `query { deviceQuery{_id,Room} }`,
+		query: "query { deviceQuery{_id,Address,Building,Floor,Room} }",
 		variables: null
 	});
-	await fetch('http://40.89.134.226:4000/graphql', REQUEST)
+	await fetch(GRAPHQL_URL+"graphql", REQUEST)
 		.then(r => r.json())
 		.then(data => data.data.deviceQuery.forEach(d => {
 			let option = document.createElement("option");
 			option.value = d._id;
-			option.innerText = d.Room;
+			option.innerText = `${d.Address}/${d.Building?d.Building+"/":""}${d.Floor?d.Floor+"/":""}${d.Room}`;
 			deviceSelect.appendChild(option);
 		}));
 }
 
 async function fetchValues(device) {
-	const dataTemp = {format: "°C", values: []};
-	const dataHumid = {format: "%", values: []};
-	const dataLight = {format: "Lux", values: []};
+	const dataTemp = [];
+	const dataHumid = [];
+	const dataLight = [];
 
 	REQUEST.body = JSON.stringify({
 		query: `query { measurementQuery(DeviceID: "${device}"){Timestamp, Temperature, Humidity, Brightness} }`,
 		variables: null
 	});
-	await fetch('http://40.89.134.226:4000/graphql', REQUEST)
+	await fetch(GRAPHQL_URL+"graphql", REQUEST)
 		.then(r => r.json())
 		.then(data => data.data.measurementQuery.forEach(m => {
 			let timestamp = parseInt(m.Timestamp) * 1000;
-			dataTemp.values.push([timestamp, m.Temperature]);
-			dataHumid.values.push([timestamp, m.Humidity]);
-			dataLight.values.push([timestamp, m.Brightness]);
+			dataTemp.push([timestamp, m.Temperature]);
+			dataHumid.push([timestamp, m.Humidity]);
+			dataLight.push([timestamp, m.Brightness]);
 		})).finally(function () {
-			visualize.addGraph("temp", [1, 0, 0, 1], dataTemp, 30, 10, 30);
-			visualize.addGraph("humid", [0, 0, 1, 1], dataHumid, 30);
-			visualize.addGraph("lux", [0, 1, 0, 1], dataLight, 30);
+			visualize.updateGraph("temp",dataTemp);
+			visualize.updateGraph("humid",dataHumid);
+			visualize.updateGraph("lux",dataLight);
 		});
 }
 
@@ -57,7 +61,7 @@ deviceSelect.onchange = function (event) {
 	fetchValues(deviceSelect.value);
 };
 
-fetchDevices();
+fetchDevices().then(() => fetchValues(deviceSelect.value));
 
 
 

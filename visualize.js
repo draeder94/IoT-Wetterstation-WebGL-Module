@@ -190,30 +190,25 @@ function initVisualize(canvas) {
 
 					let targetDM;
 					let renderPoint = [];
-					if (displayMode.isCorner(pickResult.pickedPoint.x, pickResult.pickedPoint.y))
-					{
+					if (displayMode.isCorner(pickResult.pickedPoint.x, pickResult.pickedPoint.y)) {
 						targetDM = Modes.OVERHEAD;
-						renderPoint = [displayMode.texOffset[0]+.05, displayMode.texOffset[1]-0.25];
+						renderPoint = [displayMode.texOffset[0] + .05, displayMode.texOffset[1] - 0.25];
 					}
-					else if (pickResult.pickedPoint.x < -sizes.clickMarginSide)
-					{
+					else if (pickResult.pickedPoint.x < -sizes.clickMarginSide) {
 						targetDM = displayMode.neighbourLeft();
-						renderPoint = [displayMode.texOffset[0]+.05, displayMode.texOffset[1]-0.25];
+						renderPoint = [displayMode.texOffset[0] + .05, displayMode.texOffset[1] - 0.25];
 					}
-					else if (pickResult.pickedPoint.x > sizes.clickMarginSide)
-					{
+					else if (pickResult.pickedPoint.x > sizes.clickMarginSide) {
 						targetDM = displayMode.neighbourRight();
-						renderPoint = [displayMode.texOffset[0]+.45, displayMode.texOffset[1]-0.25];
+						renderPoint = [displayMode.texOffset[0] + .45, displayMode.texOffset[1] - 0.25];
 					}
-					else if (pickResult.pickedPoint.y < -sizes.clickMarginSide)
-					{
+					else if (pickResult.pickedPoint.y < -sizes.clickMarginSide) {
 						targetDM = displayMode.neighbourBottom();
-						renderPoint = [displayMode.texOffset[0]+.25, displayMode.texOffset[1]-0.05];
+						renderPoint = [displayMode.texOffset[0] + .25, displayMode.texOffset[1] - 0.05];
 					}
-					else if (pickResult.pickedPoint.y > sizes.clickMarginSide)
-					{
+					else if (pickResult.pickedPoint.y > sizes.clickMarginSide) {
 						targetDM = displayMode.neighbourTop();
-						renderPoint = [displayMode.texOffset[0]+.25, displayMode.texOffset[1]-0.45];
+						renderPoint = [displayMode.texOffset[0] + .25, displayMode.texOffset[1] - 0.45];
 					}
 					if (targetDM) {
 						let txt = "GoTo ";
@@ -225,7 +220,7 @@ function initVisualize(canvas) {
 
 						let strWidth = drawContext.measureText(txt).width;
 
-						drawPlane.drawText(txt, renderPoint[0]* texSize - strWidth / 2, renderPoint[1]*texSize, "bold 20px verdana", "white", "transparent");
+						drawPlane.drawText(txt, renderPoint[0] * texSize - strWidth / 2, renderPoint[1] * texSize, "bold 20px verdana", "white", "transparent");
 					}
 					else {
 						if (clicked_x >= sizes.marginLeft * 2 //&& clicked_x <= 1 - sizes.marginLeft * 2
@@ -252,7 +247,7 @@ function initVisualize(canvas) {
 							drawContext.lineTo(posX, posY);
 							drawContext.stroke();
 
-							let off = [posY > cursorY ? -24 : 0, posY > cursorY ? 0 : 24];
+							let off = [posY > cursorY ? -24 : 60, posY > cursorY ? 0 : 84];
 							drawPlane.drawText(strVal, cursorX - strWidthVal / 2, cursorY + off[0], "bold 20px verdana", "white", "transparent");
 							drawPlane.drawText(strTime, cursorX - strWidthTime / 2, cursorY + off[1], "bold 16px verdana", "white", "transparent");
 							update = false;
@@ -268,7 +263,7 @@ function initVisualize(canvas) {
 
 	return {
 		graphs: graphs,
-		addGraph: (name, color, data, maxlength = -1, minVal=null, maxVal=null) => _addGraph(name, color, graphs, data, maxlength, textureScene, minVal, maxVal),
+		addGraph: (name, color, data, maxlength = -1, minVal = null, maxVal = null) => _addGraph(name, color, graphs, data, maxlength, textureScene, minVal, maxVal),
 		addToGraph: (name, val) => graphs[name].addVal(val),
 		updateGraph: (name, data) => graphs[name].update(data)
 	}
@@ -365,15 +360,16 @@ function _addGraph(name, color, graphs, data, maxLength, textureScene, minVal, m
 	}
 
 	graph.update = function (data) {
-		if (data instanceof Object) {
+		if (data instanceof Array)
+			this.data = sortData(data);
+		else if (data instanceof Object) {
 			if (data.format)
 				this.valueFormat = data.format;
 			this.data = sortData(data.values);
 		}
-		else if (data instanceof Array)
-			this.data = sortData(data);
-		this.maxLength = Math.max(this.data.length, this.maxLength);
-		Object.assign(graph, determineDomains(data.values, this.minVal, this.maxVal));
+		else
+			this.maxLength = Math.max(this.data.length, this.maxLength);
+		Object.assign(graph, determineDomains(this.data, this.minVal, this.maxVal));
 		this.lines.dispose();
 		this.lines = buildLine(this);
 	};
