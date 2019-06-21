@@ -1,9 +1,65 @@
+const REQUEST = {
+	method: 'POST',
+	headers: {
+		'Content-Type': 'application/json',
+		'Accept': 'application/json',
+	}
+};
+
 const canvas = document.getElementById("renderCanvas"); // Get the canvas element
+const deviceSelect = document.getElementById("devices"); // Get the canvas element
 
 const paramSim = /simulation=([^&]+)/.exec(window.location.href);
 const simulationType = paramSim ? paramSim[1] : "random";
 
 const visualize = initVisualize(canvas);
+
+async function fetchDevices() {
+	REQUEST.body = JSON.stringify({
+		query: `query { deviceQuery{_id,Room} }`,
+		variables: null
+	});
+	await fetch('http://40.89.134.226:4000/graphql', REQUEST)
+		.then(r => r.json())
+		.then(data => data.data.deviceQuery.forEach(d => {
+			let option = document.createElement("option");
+			option.value = d._id;
+			option.innerText = d.Room;
+			deviceSelect.appendChild(option);
+		}));
+}
+
+async function fetchValues(device) {
+	const dataTemp = {format: "°C", values: []};
+	const dataHumid = {format: "%", values: []};
+	const dataLight = {format: "Lux", values: []};
+
+	REQUEST.body = JSON.stringify({
+		query: `query { measurementQuery(DeviceID: "${device}"){Timestamp, Temperature, Humidity, Brightness} }`,
+		variables: null
+	});
+	await fetch('http://40.89.134.226:4000/graphql', REQUEST)
+		.then(r => r.json())
+		.then(data => data.data.measurementQuery.forEach(m => {
+			let timestamp = parseInt(m.Timestamp) * 1000;
+			dataTemp.values.push([timestamp, m.Temperature]);
+			dataHumid.values.push([timestamp, m.Humidity]);
+			dataLight.values.push([timestamp, m.Brightness]);
+		})).finally(function () {
+			visualize.addGraph("temp", [1, 0, 0, 1], dataTemp, 30, 10, 30);
+			visualize.addGraph("humid", [0, 0, 1, 1], dataHumid, 30);
+			visualize.addGraph("lux", [0, 1, 0, 1], dataLight, 30);
+		});
+}
+
+deviceSelect.onchange = function (event) {
+	console.log("Select changed!");
+	fetchValues(deviceSelect.value);
+};
+
+fetchDevices();
+
+
 
 //Temp in C, Humidity in %, Light in Lux
 const valuesTest = [
@@ -44,9 +100,6 @@ for (let i in valuesTest) {
 	dataLight.values.push([timestamp, valuesTest[i][2]]);
 }
 
-visualize.addGraph("temp", [1, 0, 0, 1], dataTemp, 30);
-visualize.addGraph("humid", [0, 0, 1, 1], dataHumid, 30);
-visualize.addGraph("lux", [0, 1, 0, 1], dataLight, 30);
 
 let last = 0;
 let prevstep = [0, 0, 0];
@@ -90,4 +143,4 @@ function updateValues() {
 	setTimeout(updateValues, 1000);
 }
 
-setTimeout(updateValues, 5000);
+// setTimeout(updateValues, 5000);

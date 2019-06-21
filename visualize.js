@@ -236,7 +236,7 @@ function initVisualize(canvas) {
 							let val = graph.findVal(pos);
 							let date = new Date(val[0]);
 
-							let strVal = `${val[1].toPrecision(2)} ${graph.valueFormat}`;
+							let strVal = `${val[1].toFixed(2)} ${graph.valueFormat}`;
 							let strWidthVal = drawContext.measureText(strVal).width;
 							let strTime = `${date.toDateString()} ${date.getHours()}:${date.getMinutes()}`;
 							let strWidthTime = drawContext.measureText(strTime).width;
@@ -268,7 +268,7 @@ function initVisualize(canvas) {
 
 	return {
 		graphs: graphs,
-		addGraph: (name, color, data, maxlength = -1) => _addGraph(name, color, graphs, data, maxlength, textureScene),
+		addGraph: (name, color, data, maxlength = -1, minVal=null, maxVal=null) => _addGraph(name, color, graphs, data, maxlength, textureScene, minVal, maxVal),
 		addToGraph: (name, val) => graphs[name].addVal(val),
 		updateGraph: (name, data) => graphs[name].update(data)
 	}
@@ -285,7 +285,7 @@ function initVisualize(canvas) {
  * @param textureScene
  * @returns created graph object
  */
-function _addGraph(name, color, graphs, data, maxLength, textureScene) {
+function _addGraph(name, color, graphs, data, maxLength, textureScene, minVal, maxVal) {
 	console.log("Adding graph " + graphs._count + ", '" + name + "'");
 
 	const offsetX = -0.5 + graphs._count % 2 * 0.5 + sizes.marginLeft;
@@ -293,8 +293,9 @@ function _addGraph(name, color, graphs, data, maxLength, textureScene) {
 
 	createCoordinateSystem(name, offsetX, offsetY, textureScene);
 
-	function determineDomains(values) {
-		let minVal, maxVal = null;
+	function determineDomains(values, _minVal, _maxVal) {
+		let minVal = _minVal;
+		let maxVal = _maxVal;
 		let minDate, maxDate = null;
 		for (let e of values) {
 			if (!minVal && !maxVal)
@@ -324,7 +325,7 @@ function _addGraph(name, color, graphs, data, maxLength, textureScene) {
 		return data.sort((e1, e2) => e1[0] - e2[0]);
 	}
 
-	const domains = determineDomains(data.values);
+	const domains = determineDomains(data.values, minVal, maxVal);
 	console.log(domains);
 	const graph = {
 		name: name,
@@ -332,6 +333,8 @@ function _addGraph(name, color, graphs, data, maxLength, textureScene) {
 		data: sortData(data.values),
 		domainTime: null,
 		domainValue: null,
+		minVal: minVal,
+		maxVal: maxVal,
 		color: BABYLON.Color4.FromArray(color),
 		maxLength: Math.max(data.values.length, maxLength),
 		lines: null,
@@ -370,7 +373,7 @@ function _addGraph(name, color, graphs, data, maxLength, textureScene) {
 		else if (data instanceof Array)
 			this.data = sortData(data);
 		this.maxLength = Math.max(this.data.length, this.maxLength);
-		Object.assign(graph, determineDomains(data.values));
+		Object.assign(graph, determineDomains(data.values, this.minVal, this.maxVal));
 		this.lines.dispose();
 		this.lines = buildLine(this);
 	};
@@ -386,7 +389,7 @@ function _addGraph(name, color, graphs, data, maxLength, textureScene) {
 		this.data.push(val);
 		if (this.data.length > this.maxLength) {
 			this.data.splice(0, this.data.length - this.maxLength);
-			Object.assign(graph, determineDomains(data.values));
+			Object.assign(graph, determineDomains(data.values, this.minVal, this.maxVal));
 		}
 		this.lines.dispose();
 		this.lines = buildLine(this);
