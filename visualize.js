@@ -321,7 +321,6 @@ function _addGraph(name, color, graphs, data, maxLength, textureScene, minVal, m
 	}
 
 	const domains = determineDomains(data.values, minVal, maxVal);
-	console.log(domains);
 	const graph = {
 		name: name,
 		valueFormat: data.format,
@@ -385,7 +384,7 @@ function _addGraph(name, color, graphs, data, maxLength, textureScene, minVal, m
 		this.data.push(val);
 		if (this.data.length > this.maxLength) {
 			this.data.splice(0, this.data.length - this.maxLength);
-			Object.assign(graph, determineDomains(data.values, this.minVal, this.maxVal));
+			Object.assign(graph, determineDomains(this.data, this.minVal, this.maxVal));
 		}
 		this.lines.dispose();
 		this.lines = buildLine(this);
@@ -400,7 +399,6 @@ function _addGraph(name, color, graphs, data, maxLength, textureScene, minVal, m
 				else {
 					let distLast = searchedDate - this.data[idx][0];
 					let distNext = this.data[i][0] - searchedDate;
-					// console.log("distLast "+distLast+", distNext: "+distNext);
 					if (distLast <= distNext)
 						return this.data[idx];
 					else
