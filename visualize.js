@@ -64,6 +64,7 @@ function initVisualize(canvas) {
 	// Babylon Setup: Engine, Scene, Lights, Camera
 	const engine = new BABYLON.Engine(canvas, true); // Generate the BABYLON 3D engine
 	const scene = new BABYLON.Scene(engine);
+	scene.clearColor = BABYLON.Color3.Black();
 	const light1 = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(1, 1, 0), scene);
 	const light2 = new BABYLON.PointLight("light2", new BABYLON.Vector3(-1, -1, -1), scene);
 	const camera = new BABYLON.UniversalCamera("UniversalCamera", new BABYLON.Vector3(0, 0, -2), scene);
@@ -220,7 +221,7 @@ function initVisualize(canvas) {
 
 						let strWidth = drawContext.measureText(txt).width;
 
-						drawPlane.drawText(txt, renderPoint[0] * texSize - strWidth / 2, renderPoint[1] * texSize, "bold 20px verdana", "white", "transparent");
+						drawPlane.drawText(txt, renderPoint[0] * texSize - strWidth / 2, renderPoint[1] * texSize, "bold 20px verdana", "black", "transparent");
 					}
 					else {
 						if (clicked_x >= sizes.marginLeft * 2 //&& clicked_x <= 1 - sizes.marginLeft * 2
@@ -248,8 +249,8 @@ function initVisualize(canvas) {
 							drawContext.stroke();
 
 							let off = [posY > cursorY ? -24 : 60, posY > cursorY ? 0 : 84];
-							drawPlane.drawText(strVal, cursorX - strWidthVal / 2, cursorY + off[0], "bold 20px verdana", "white", "transparent");
-							drawPlane.drawText(strTime, cursorX - strWidthTime / 2, cursorY + off[1], "bold 16px verdana", "white", "transparent");
+							drawPlane.drawText(strVal, cursorX - strWidthVal / 2, cursorY + off[0], "bold 20px verdana", "black", "transparent");
+							drawPlane.drawText(strTime, cursorX - strWidthTime / 2, cursorY + off[1], "bold 16px verdana", "black", "transparent");
 							update = false;
 						}
 					}
@@ -439,7 +440,8 @@ function createCoordinateSystem(name, offsetX, offsetY, textureScene) {
 		new BABYLON.Vector3(offsetX + sizes.segmentWidth, offsetY, z),
 		new BABYLON.Vector3(offsetX + sizes.segmentWidth - .01, offsetY + .01, z)
 	];
-	BABYLON.MeshBuilder.CreateLines("coordsys" + name, {points: points_coordSys}, textureScene);
+	let line = BABYLON.MeshBuilder.CreateLines("coordsys" + name, {points: points_coordSys}, textureScene);
+	line.color = BABYLON.Color3.Black();
 
 }
 
@@ -501,7 +503,7 @@ function initDynamicTexture(engine, scene, cube) {
 	const textureCamera = new BABYLON.UniversalCamera("UniversalCamera", new BABYLON.Vector3(0, 0, -1.883), textureScene);
 	textureCamera.setTarget(BABYLON.Vector3.Zero());
 	const textureLight = new BABYLON.HemisphericLight("texlight1", new BABYLON.Vector3(1, 1, 0), textureScene);
-	textureScene.clearColor = BABYLON.Color3.Gray();
+	textureScene.clearColor = BABYLON.Color3.White();
 
 	// Init Texture, put on cube's Material
 	const renderTexture = new BABYLON.RenderTargetTexture("render", texSize, textureScene, true, false);
