@@ -79,30 +79,45 @@ function initVisualize(canvas) {
 		_count: 0
 	};
 
-	/*
+
 	var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
 	// advancedTexture.isForeground = false;
 
-	var button1 = BABYLON.GUI.Button.CreateSimpleButton("but1", "Click Me");
-	button1.width = "150px";
-	button1.height = "40px";
-	button1.color = "white";
-	button1.cornerRadius = 20;
-	button1.background = "green";
-	button1.onPointerUpObservable.add(function () {
-		alert("you did it!");
-	});
-	advancedTexture.addControl(button1);
+	// var button1 = BABYLON.GUI.Button.CreateSimpleButton("but1", "Click Me");
+	// button1.width = "150px";
+	// button1.height = "40px";
+	// button1.color = "white";
+	// button1.cornerRadius = 20;
+	// button1.background = "green";
+	// button1.onPointerUpObservable.add(function () {
+	// 	alert("you did it!");
+	// });
+	// advancedTexture.addControl(button1);
 
-	var text1 = new BABYLON.GUI.TextBlock();
-	text1.text = "Hello world";
-	text1.color = "white";
-	text1.fontSize = 24;
-	advancedTexture.addControl(text1);
-*/
+	var textBlock = new BABYLON.GUI.TextBlock();
+	// text1.text = "Hello world";
+	textBlock.color = "white";
+	textBlock.fontSize = 20;
+	textBlock.width = "150px";
+	textBlock.height = "60px";
+	advancedTexture.addControl(textBlock);
 
-	// scene.debugLayer.show();
-
+	function displayGuiText(text, direction) {
+		textBlock.text = text ? text : "";
+		if ((direction & 0x1) !== 0)
+			textBlock.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+		else if ((direction & 0x2) !== 0)
+			textBlock.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+		else
+			textBlock.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+		if ((direction & 0x4) !== 0)
+			textBlock.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+		else if ((direction & 0x8) !== 0)
+			textBlock.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+		else
+			textBlock.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+		advancedTexture.update();
+	}
 
 	const cube = buildCubeMesh(scene);
 	cube.rotation = displayMode.rotation;
@@ -190,46 +205,41 @@ function initVisualize(canvas) {
 					let boundsRight = (displayMode.texOffset[0] + .5) * texSize;
 
 					let targetDM;
-					let renderPoint = [];
+					let renderPoint;
 					if (displayMode.isCorner(pickResult.pickedPoint.x, pickResult.pickedPoint.y)) {
 						targetDM = Modes.OVERHEAD;
-						renderPoint = [displayMode.texOffset[0] + .05, displayMode.texOffset[1] - 0.25];
+						renderPoint = displayMode === Modes.LEFT ? (0x1|0x8) : displayMode === Modes.FRONT ? (0x1|0x4): (0x2|0x4);
 					}
 					else if (pickResult.pickedPoint.x < -sizes.clickMarginSide) {
 						targetDM = displayMode.neighbourLeft();
-						renderPoint = [displayMode.texOffset[0] + .05, displayMode.texOffset[1] - 0.25];
+						renderPoint = 0x4;
 					}
 					else if (pickResult.pickedPoint.x > sizes.clickMarginSide) {
 						targetDM = displayMode.neighbourRight();
-						renderPoint = [displayMode.texOffset[0] + .45, displayMode.texOffset[1] - 0.25];
+						renderPoint = 0x8;
 					}
 					else if (pickResult.pickedPoint.y < -sizes.clickMarginSide) {
 						targetDM = displayMode.neighbourBottom();
-						renderPoint = [displayMode.texOffset[0] + .25, displayMode.texOffset[1] - 0.05];
+						renderPoint = 0x2;
 					}
 					else if (pickResult.pickedPoint.y > sizes.clickMarginSide) {
 						targetDM = displayMode.neighbourTop();
-						renderPoint = [displayMode.texOffset[0] + .25, displayMode.texOffset[1] - 0.45];
+						renderPoint = 0x1;
 					}
 					if (targetDM) {
-						let txt = "GoTo ";
-						if (targetDM === Modes.OVERHEAD)
-							txt += "Overview";
-						else
-							txt += graphs[targetDM.graph].name;
-
-
-						let strWidth = drawContext.measureText(txt).width;
-
-						drawPlane.drawText(txt, renderPoint[0] * texSize - strWidth / 2, renderPoint[1] * texSize, "bold 20px verdana", "black", "transparent");
+						let txt = "Zur\n" + (targetDM === Modes.OVERHEAD ? "Übersicht" : graphs[targetDM.graph].name);
+						displayGuiText(txt, renderPoint);
 					}
-					else {
-						if (clicked_x >= sizes.marginLeft * 2 //&& clicked_x <= 1 - sizes.marginLeft * 2
-							&& clicked_y >= sizes.marginTop * 2) {//&& clicked_y <= 1 - sizes.marginTop * 2) {
-							let graph = graphs[displayMode.graph];
+					else
+						displayGuiText(null, 0);
 
-							let pos = (clicked_x - sizes.marginLeft * 2) / (sizes.segmentWidth * 2);
-							let val = graph.findVal(pos);
+					if (clicked_x >= sizes.marginLeft * 2 //&& clicked_x <= 1 - sizes.marginLeft * 2
+						&& clicked_y >= sizes.marginTop * 2) {//&& clicked_y <= 1 - sizes.marginTop * 2) {
+						let graph = graphs[displayMode.graph];
+
+						let pos = (clicked_x - sizes.marginLeft * 2) / (sizes.segmentWidth * 2);
+						let val = graph.findVal(pos);
+						if(val) {
 							let date = new Date(val[0]);
 
 							let strVal = `${val[1].toFixed(2)} ${graph.valueFormat}`;
