@@ -188,6 +188,7 @@ function initVisualize(canvas) {
 			if (isTransitioning) {
 				drawPlane.getContext().clearRect(0, 0, texSize, texSize);
 				drawPlane.update();
+				displayGuiText(null, 0);
 			}
 			else if (displayMode === Modes.OVERHEAD) {
 				drawContext.clearRect(0, 0, texSize, texSize);
